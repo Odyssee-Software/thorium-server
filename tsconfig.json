@@ -1,0 +1,20 @@
+{
+  "compilerOptions": {
+    "module": "CommonJS",
+    "target": "ES2016",
+    "declaration": true,
+    "sourceMap": true,
+    "removeComments": false,
+    "preserveConstEnums" : true,
+    "skipLibCheck": true,
+    "moduleResolution":"node",
+    "outDir": "dist",
+    "esModuleInterop": true,
+    "noImplicitAny": false,
+    "baseUrl": "."
+  },
+  "include": [
+    "./src/**/**.ts",
+    "./src/Globals.d.ts",
+  ]
+}
