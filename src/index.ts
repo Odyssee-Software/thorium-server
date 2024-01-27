@@ -1,6 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import { default as express , Express, Router } from 'express';
+import { default as express , Express, Router , Application } from 'express';
 import Server, { Configuration as DevServerConfiguration } from "webpack-dev-server";
 import webpack from "webpack";
 import middleware from "webpack-dev-middleware";
@@ -20,6 +20,12 @@ import { default as Debug } from 'debug';
 import { thoriumPackager } from 'thorium-packager';
 
 let serverLog = Debug('Thorium_Server');
+
+export function compileHTML( path:string , options:Record<string , any> ){
+  if(!fs.existsSync( path ))throw { "message" : `no html file ${path}` } ;
+  let template = handlbars.compile( fs.readFileSync( path , 'utf-8' ) );
+  return template( options );
+}
 
 /** The line is creating a new debug function called
 `serverMessage` that is an extension of the `serverLog` debug function. This allows you to log
@@ -104,7 +110,7 @@ else{
 let devServer:Express | Server['app'] = express();
 
 /** The `IThoriumServerConfiguration` interface defines the structure of the server configuration object used in the Thorium Server. It has the following properties: */
-interface IThoriumServerConfiguration{
+export interface IThoriumServerConfiguration{
 
   /** The `main?:string;` line is defining a property called `main` in the `IThoriumServerConfiguration`
   interface. The `main` property is of type `string` and represents the path to the main.js file of
@@ -248,6 +254,38 @@ export const preloadConfiguration = async ( serverDirPath = process.env.PWD || p
     }
   }
 
+  // Si devServer
+  if(server){
+
+    (server as Application).get( '/static/:fileName' , ( req , res , next ) => {
+
+      let filePath = path.join( serverDirPath , 'static' , req.params.fileName );
+      if(fs.existsSync( filePath )){
+        res.sendFile( filePath );
+      }else res.status(404).send({ error : 'file not fund' });
+
+    })
+
+    if( serverConfiguration.client.views ){
+
+      let { views } = serverConfiguration.client;
+  
+      for(const route of Object.keys(views)){
+        let filePath = path.join(serverDirPath , views[route]);
+        (server as Express).get( route , ( req , res , next ) => {
+  
+          // let template = handlbars.compile( fs.readFileSync( filePath , 'utf-8' ) );
+          // let result = template( { build : 'build.js' } );
+          res.send( compileHTML( filePath , { build : 'static/build.js' } ) );
+          
+        })
+      }
+      
+  
+    }
+
+  }
+
   // Si pas de webpack-dev-server
   // Lecture et exploitation de package et views avec thorium-server
   // The code block you provided is responsible for loading and setting up the views and package endpoints in the Thorium Server.
@@ -262,9 +300,9 @@ export const preloadConfiguration = async ( serverDirPath = process.env.PWD || p
         let filePath = path.join(serverDirPath , views[route]);
         (devServer as Express).get( route , ( req , res , next ) => {
 
-          let template = handlbars.compile( fs.readFileSync( filePath , 'utf-8' ) );
-          let result = template( { build : 'build.js' } );
-          res.send( result )
+          // let template = handlbars.compile( fs.readFileSync( filePath , 'utf-8' ) );
+          // let result = template( { build : 'build.js' } );
+          res.send( compileHTML( filePath , { build : 'build.js' } ) );
           
         })
       }
